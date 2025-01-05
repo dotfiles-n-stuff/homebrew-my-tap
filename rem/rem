@@ -1,0 +1,38 @@
+#! /usr/bin/env ruby
+
+# Получает список файлов и перемещает их в корзину.
+
+# Определяем версию
+VERSION = "1.0.0"
+
+# Проверяем аргументы командной строки
+if ARGV.include?("--help") || ARGV.include?("-h")
+  puts "Использование: #{File.basename($PROGRAM_NAME)} file ..."
+  exit
+end
+
+if ARGV.include?("--version") || ARGV.include?("-v")
+  puts "#{File.basename($PROGRAM_NAME)} версия: #{VERSION}"
+  exit
+end
+
+abort "Usage: #{File.basename($PROGRAM_NAME)} file ..." if ARGV.empty?
+
+# Создаем строку с файлами для передачи в osascript
+files_to_delete = ARGV.select { |file| File.exist?(file) || File.symlink?(file) }
+
+# Проверяем, существуют ли файлы
+ARGV.each do |file|
+  unless File.exist?(file) || File.symlink?(file)
+    warn "#{File.basename($PROGRAM_NAME)}: Файл или директория '#{file}' не существует."
+  end
+end
+
+if files_to_delete.empty?
+  warn "#{File.basename($PROGRAM_NAME)}: Нет файлов для удаления."
+else
+  # Формируем команду для osascript
+  files_string = files_to_delete.map { |file| "POSIX file \"#{File.expand_path(file)}\"" }.join(", ")
+  system("osascript -e 'tell application \"Finder\" to delete {#{files_string}}' > /dev/null")
+  puts "Перемещены в корзину: #{files_to_delete.join(", ")}."
+end
